@@ -11,6 +11,7 @@ import { OrbisDB, type OrbisConnectResult } from "@useorbis/db-sdk";
 import { OrbisEVMAuth } from "@useorbis/db-sdk/auth";
 import { useWalletClient, useAccountEffect } from "wagmi";
 import { env } from "@/env.mjs";
+import { FRESHNESS_IN_MILLISECONDS as TACO_EXPIRATION_TIME } from "@nucypher/taco-auth";
 
 type OrbisDBProps = {
   children: ReactNode;
@@ -77,6 +78,7 @@ export const ODB = ({ children }: OrbisDBProps) => {
           Buffer.from(storedSession, "base64").toString(),
         ) as { cacao: Cacao };
 
+        const issuedAt = Date.parse(cacao.p.iat);
         const expTime = cacao.p.exp;
         const sessionAddress = cacao.p.iss
           .replace("did:pkh:eip155:1:", "")
@@ -84,8 +86,8 @@ export const ODB = ({ children }: OrbisDBProps) => {
 
         if (
           sessionAddress !== walletClient.account.address.toLowerCase() ||
-         ( expTime !== undefined &&
-          Date.parse(expTime) < Date.now()
+          (expTime !== undefined && Date.parse(expTime) < Date.now()) ||
+          issuedAt < Date.now() - TACO_EXPIRATION_TIME
         ) {
           console.log("Invalid session, removing...");
           localStorage.removeItem("orbis:session");
